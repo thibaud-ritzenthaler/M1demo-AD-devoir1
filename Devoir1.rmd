@@ -78,6 +78,9 @@ TableMortFemmGeneral <- read_excel("./data/exo1/tmfgen.xlsx") %>%
   column_to_rownames("Age x")
 TableMortFemmMaladie <- read_excel("./data/exo1/tmfmal.xlsx") %>%
   column_to_rownames("Age x")
+
+TableMortFemmAccident <- select(TableMortFemmGeneral, "aqx p.1000")
+TableMortFemmAccident$`aqx p.1000` <- TableMortFemmAccident$`aqx p.1000` - TableMortFemmMaladie$`aqx p.1000`
 ```
 ```{r echo = FALSE, warning = FALSE}
 ggplot() +
@@ -183,3 +186,56 @@ kable(data.frame(`Table I Sexe Masculin`,`Table I Sexe Feminin`,`Table III Sexe 
 ```
 
 L'espérance de vie générale des hommes est de 6 années de moins, l'impact des accidents sur l'espérance de vie des hommes est d'une année et demi alors qu'il n'est que d'une demi année pour les femmes. Sans accidents l'écart d'espérance de vie entre les sexes n'est que de 5 ans.
+
+## Partie II : la mortalité de la population hommes et femmes réunis
+
+*49 000 hommes et 51 000 femmes de cette génération atteignent l’âge de 55 ans.
+On se propose d’établir une partie de la table de mortalité par accident sexes réunis de la génération.*
+
+*a- Combien de décès masculins par accident et par « maladie » a-t-on observé dans cette génération
+entre 55-60 ans, 60-65 ans, 65 et 70 ans et entre 70 et 75 ans ?*
+```{r}
+PopHomme55ans <- 49000
+PopFemme55ans <- 51000
+TableMortAccident <- TableMortMascAccident %>%
+  slice(13:16) %>%
+  select(`aqx p.1000`)
+for (i in seq_along(TableMortAccident$`aqx p.1000`)) {
+  TableMortAccident$`aqx p.1000`[i] <- (TableMortAccident$`aqx p.1000`[i] + TableMortFemmAccident$`aqx p.1000`[12 + i])/2
+  TableMortAccident$`Sx Homme`[i] <- PopHomme55ans
+  TableMortAccident$`Sx Femme`[i] <- PopFemme55ans
+  TableMortAccident$`d(x;x+a) Homme`[i] <- round(PopHomme55ans * (TableMortAccident$`aqx p.1000`[i] * 0.001))
+  TableMortAccident$`d(x;x+a) Femme`[i] <- round(PopFemme55ans * (TableMortAccident$`aqx p.1000`[i] * 0.001))
+  PopHomme55ans <- PopHomme55ans - TableMortAccident$`d(x;x+a) Homme`[i]
+  PopFemme55ans <- PopFemme55ans - TableMortAccident$`d(x;x+a) Femme`[i]
+}
+```
+```{r echo = FALSE}
+kable(TableMortAccident, caption = "Table des morts par accidents")
+```
+
+*b- Le tableau en annexe donne le nombre de décès féminins par accident et par « maladie » observés dans la génération à ces âges.
+Calculer les quotients par accident (sexes réunis) 5q"a55, 5q"a60, 5q"a65 et 5q"a70 à l’aide des données d’observation et de celles obtenues à la question II-a. Que peut-on dire de ces indicateurs compte tenu des conclusions de la partie I ?*
+
+```{r warning = FALSE}
+DecesFemmesObserves <- read_excel("./data/exo1/fobservee.xlsx")
+DecesFemmesObserves$`Sx Homme Accident` <- TableMortAccident$`Sx Homme`
+DecesFemmesObserves$`d(x;x+a) Homme Accident` <- TableMortAccident$`d(x;x+a) Homme`
+for (i in seq_along(DecesFemmesObserves$`Age x`)) {
+  if (i != 1) {
+    DecesFemmesObserves$Px[i] <-  DecesFemmesObserves$Px[i-1] - DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`[i-1] - DecesFemmesObserves$`Décés par maladie observés D'm(x;x+5)`[i-1]
+  }
+  DecesFemmesObserves$`aq"x p.1000`[i] <- (DecesFemmesObserves$`d(x;x+a) Homme Accident` + DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`[i])/(DecesFemmesObserves$Px[i]+DecesFemmesObserves$`Sx Homme Accident`)*1000
+}
+
+
+```
+```{r echo = FALSE}
+kable(DecesFemmesObserves, caption = "Table des morts par accidents")
+```
+
+Quand on prend les paramètres sans faire la distinction des sexes en additionnant les quotients (une sorte de moyenne), il y a une bien plus grande mortalité des femmes que constaté avec les chiffres réels. Si on reconstruit le quotient de mortalité par accident peu importe le sexe avec ces chiffres, il baisse considérablement. Avec les éléments obtenus plus haut, on en déduit que la mortalité accidentelle est bien plus présente chez les hommes que chez les femmes, même dans cette période de la vie.
+
+*c-Plaçons-nous dans l’hypothèse où la mortalité par « maladie » des hommes serait égale à celle des femmes. Dans ce cas les décès masculins observés seraient les suivants. Les décès féminins restent inchangés. Calculer, dans cette hypothèse, les quotients par accident (sexes réunis) aux mêmes âges que précédemment. Les comparer aux quotients calculés à la question IIb. Commenter.*
+
+
