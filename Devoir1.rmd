@@ -158,3 +158,28 @@ La mortalité féminine générale est quasi indistincte de la mortalité par ma
 femmes vis-à-vis de la mortalité par accident et par maladie (en 2 ou 3 lignes maximum)*
 
 La surmortalité des hommes autour de 20 ans, sans que le quotient de mortalité par maladie ne subisse de pic à cet âge, doit donc s'expliquer par une forte surmortalité accidentelle à ces âges. La mortalité féminine générale est quasi indistincte de la mortalité par maladie, indice que la mortalité par accident est marginale dans cette population quelque soit l'âge.
+
+*f- Calculer les espérances de vie à la naissance dans les tables I M et I F et III M et III F et compléter le
+tableau ci-dessous. Commenter les valeurs obtenues et conclure.*
+```{r}
+EsperanceDeVieNaissance <- function (Age, Population) {
+  Annees <- Population
+  Racine <- Population[1]
+  AnneesVecues <- data.frame(Population, row.names = Age)
+  SommeAV <- 0
+  for (i in seq_along(Age)){
+    AnneesVecues$Annees[i] <- ((Population[i] + Population[i+1])/2) * (as.numeric(Age[i+1]) - as.numeric(Age[i]))
+    SommeAV <- SommeAV + ifelse(!is.na(AnneesVecues$Annees[i]), AnneesVecues$Annees[i], 0)
+  }
+  return(round(SommeAV/Racine,2))
+}
+```
+```{r echo = FALSE}
+`Table I Sexe Masculin` <- EsperanceDeVieNaissance(row.names(TableMortMascGeneral), TableMortMascGeneral$Sx)
+`Table I Sexe Feminin` <- EsperanceDeVieNaissance(row.names(TableMortFemmGeneral), TableMortFemmGeneral$Sx)
+`Table III Sexe Masculin` <- EsperanceDeVieNaissance(row.names(TableMortMascMaladie), TableMortMascMaladie$Sx)
+`Table III Sexe Feminin` <- EsperanceDeVieNaissance(row.names(TableMortFemmMaladie), TableMortFemmMaladie$Sx)
+kable(data.frame(`Table I Sexe Masculin`,`Table I Sexe Feminin`,`Table III Sexe Masculin`,`Table III Sexe Feminin`), caption = "Espérance de vie")
+```
+
+L'espérance de vie générale des hommes est de 6 années de moins, l'impact des accidents sur l'espérance de vie des hommes est d'une année et demi alors qu'il n'est que d'une demi année pour les femmes. Sans accidents l'écart d'espérance de vie entre les sexes n'est que de 5 ans.
