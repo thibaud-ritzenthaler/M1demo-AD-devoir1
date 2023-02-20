@@ -2,10 +2,18 @@
 title: "Devoir 1"
 output: html_notebook
 ---
+*Disponible sur ce [site](https://thibaud-ritzenthaler.github.io/M1demo-AD-devoir1/), le code source sur [Github](https://github.com/thibaud-ritzenthaler/M1demo-AD-devoir1)*.
 
 ## Exercice 1
-a- Construire la table masculine de mortalité par toutes les causes autres que les accidents (ou table
-masculine par « maladie » de cette génération). L’appeler Table III M.
+### Partie I : la mortalité des hommes et des femmes
+*On se propose d’étudier la mortalité d’une génération non soumise aux migrations, en l’absence d’autres
+causes de décès.
+On a construit la table masculine et féminine de mortalité générale (Table I M et I F), la table masculine de
+mortalité par accident (Table II M) et la table féminine de mortalité par toutes autres causes, ou table de
+mortalité par maladie (table III F) de cette génération.*
+
+*a- Construire la table masculine de mortalité par toutes les causes autres que les accidents (ou table
+masculine par « maladie » de cette génération). L’appeler Table III M.*
 ```{r include = FALSE}
 library(readxl)
 library(tidyverse)
@@ -14,25 +22,139 @@ setwd("C:/Users/Thibaud/Documents/Demographie/M1S2/UE1 - Analyse demographique/B
 
 TableMortMascGeneral <- read_excel("./data/exo1/tmhgen.xlsx") %>%
   column_to_rownames("Age x")
-TableMortMascMaladie <- read_excel("./data/exo1/tmhmal.xlsx")%>%
+TableMortMascAccident <- read_excel("./data/exo1/tmhmal.xlsx") %>%
   column_to_rownames("Age x")
 ```
 
-La table Table III M. est la table de ceux qui ont subi le phénomène de la mortalité mais qui n'ont pas subis le phénomène de mortalité suite à un accident. On peux calculer son quotient pour chaque âge en prenant le quotien de mortalité par accident pour chaque âge et en le soustrayant au quotien de mortalité générale pour chaque âge.
+La Table III M. est la table de ceux qui ont subi le phénomène de la mortalité, mais qui n'ont pas subi le phénomène de mortalité suite à un accident. On peut calculer son quotient pour chaque âge en prenant le quotient de mortalité par accident pour chaque âge et en le soustrayant au quotient de mortalité générale pour chaque âge.
 
 On calcule ensuite le taux brut de mortalité maladive pour chaque âge.
 ```{r message = FALSE}
-Racine <- 10000
-TableMortMascIII <- TableMortMascGeneral %>%
+Racine <- 100000
+TableMortMascMaladie <- TableMortMascGeneral %>%
   select("aqx p.1000") %>%
-  bind_cols(select(TableMortMascMaladie, "aqx p.1000")) %>%
+  bind_cols(select(TableMortMascAccident, "aqx p.1000")) %>%
   mutate("aqx p.1000" = `aqx p.1000...1` - `aqx p.1000...2`) %>%
   select(`aqx p.1000`)
-for (i in seq_along(TableMortMascIII$`aqx p.1000`)) {
-  TableMortMascIII$`Sx`[i] <- Racine
-  TableMortMascIII$`d(x;x+a)`[i] <- round(Racine * (TableMortMascIII$`aqx p.1000`[i]/1000))
-  Racine <- Racine - TableMortMascIII$`d(x;x+a)`[i]
+for (i in seq_along(TableMortMascMaladie$`aqx p.1000`)) {
+  TableMortMascMaladie$`Sx`[i] <- Racine
+  TableMortMascMaladie$`d(x;x+a)`[i] <- round(Racine * (TableMortMascMaladie$`aqx p.1000`[i] * 0.001))
+  Racine <- Racine - TableMortMascMaladie$`d(x;x+a)`[i]
 }
-TableMortMascIII <- relocate(TableMortMascIII,`Sx`,`d(x;x+a)`,`aqx p.1000`)
-kable(TableMortMascIII, caption = 'Table III M.')
+TableMortMascMaladie <- relocate(TableMortMascMaladie, `Sx`, `d(x;x+a)`, `aqx p.1000`)
 ```
+```{r echo = FALSE}
+kable(TableMortMascMaladie, caption = 'Table III M.')
+```
+
+*b- A un âge quelconque à choisir, calculer pour une base de 100 000 survivants à cet âge, les décès
+masculins à partir des tables IM, II M et III M. Faire la somme des décès obtenus par la table IIM et IIIM
+et comparer avec ceux obtenus à partir de la table IM. Que mesure l’écart constaté ? Faire une
+interprétation allant au-delà de l’explication mécanique.*
+
+```{r}
+SommeMort <- TableMortMascGeneral %>%
+  select(`d(x;x+a)`) %>%
+  rename(`d(x;x+a) Constatés` = `d(x;x+a)`)
+SommeMort$`d(x;x+a) Somme` <- TableMortMascAccident$`d(x;x+a)` + TableMortMascMaladie$`d(x;x+a)`
+SommeMort$`Difference Brute` <- SommeMort$`d(x;x+a) Somme` - SommeMort$`d(x;x+a) Constatés`
+SommeMort$'Difference p.100' <- round((SommeMort$`d(x;x+a) Somme` - SommeMort$`d(x;x+a) Constatés`) / SommeMort$`d(x;x+a) Constatés` * 100, 2)
+
+```
+```{r echo = FALSE}
+kable(SommeMort, caption = "Décès observés, sommes des décès calculés et différence")
+```
+
+On constate que les décès calculés sont plus nombreux, surtout en fin de vie. On peut présupposer que cet écart est dû à une interference entre les deux phénomènes.
+
+*c- Tracer un graphique (échelle semi logarithmique) avec les quotients masculins et féminins des tables
+I M et I F et un autre avec les quotients masculins et féminins des tables III M et III F. Comparer les
+deux graphiques et commenter.*
+
+```{r include = FALSE}
+library(scales)
+library(gridExtra)
+TableMortFemmGeneral <- read_excel("./data/exo1/tmfgen.xlsx") %>%
+  column_to_rownames("Age x")
+TableMortFemmMaladie <- read_excel("./data/exo1/tmfmal.xlsx") %>%
+  column_to_rownames("Age x")
+```
+```{r echo = FALSE, warning = FALSE}
+ggplot() +
+  geom_line(data = TableMortMascGeneral, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortMascGeneral)), color = "Hommes")) +
+  geom_line(data = TableMortFemmGeneral, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortFemmGeneral)), color = "Femmes")) +
+  scale_color_manual(values = c("#d65959", "#e3bd1b"), name = NULL) +
+  scale_y_continuous(trans = "log10", breaks = function(x) {
+    brks <- extended_breaks(Q = c(1, 5))(log10(x))
+    10^(brks[brks %% 1 == 0])
+  }, labels = math_format(format = log10))+
+  annotation_logticks(sides = "l") +
+  ggtitle("Quotiens de mortalité générale") +
+  xlab("Age") +
+  ylab("Quotien de mortalité")
+
+ggplot() +
+  geom_line(data = TableMortMascMaladie, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortMascMaladie)), color = "Hommes")) +
+  geom_line(data = TableMortFemmMaladie, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortFemmMaladie)), color = "Femmes")) +
+  scale_color_manual(values = c("#d65959", "#e3bd1b"), name = NULL) +
+  scale_y_continuous(trans = "log10",
+                     breaks = function(x) {
+                       brks <- extended_breaks(Q = c(1, 5))(log10(x))
+                       10^(brks[brks %% 1 == 0])
+                     },
+                     labels = math_format(format = log10))+
+  annotation_logticks(sides = "l") +
+  ggtitle("Quotiens de mortalité par maladie") +
+  xlab("Age") +
+  ylab("Quotien de mortalité")
+```
+
+La mortalité générale des hommes est plus élevée que celle des femmes à tout âge. La différence s'amenuise avec le temps et un pic est constaté entre 15 et 25 ans. La mortalité due à une maladie des hommes est toujours supérieure à celle des femmes, mais la différence est beaucoup moins marquée, son pic ayant lieu autour de 55 ans.
+
+
+*d- Tracer un graphique (avec une échelle semi logarithmique) avec les quotients masculins des tables I
+M et III M. et un autre avec les quotients féminins des tables I F et III F. Commenter.*
+
+```{r echo = FALSE, warning = FALSE}
+ggplot() +
+  geom_line(data = TableMortMascGeneral, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortMascGeneral)), color = "Mortalité générale")) +
+  geom_line(data = TableMortMascMaladie, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortMascMaladie)), color = "Mortalité par maladie")) +
+  scale_color_manual(values = c("#d65959", "#e3bd1b"), name = NULL) +
+  scale_y_continuous(
+    trans = "log10",
+    breaks = function(x) {
+      brks <- extended_breaks(Q = c(1, 5))(log10(x))
+      10^(brks[brks %% 1 == 0])
+    },
+    labels = math_format(format = log10)
+  )+
+  annotation_logticks(sides = "l") +
+  ggtitle("Quotiens de mortalité masculins") +
+  xlab("Age") +
+  ylab("Quotien de mortalité")
+
+ggplot() +
+  geom_line(data = TableMortFemmGeneral, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortFemmGeneral)), color = "Mortalité générale")) +
+  geom_line(data = TableMortFemmMaladie, aes(y = `aqx p.1000`, x = as.numeric(row.names(TableMortFemmMaladie)), color = "Mortalité par maladie")) +
+  scale_color_manual(values = c("#d65959", "#e3bd1b"), name = NULL) +
+  scale_y_continuous(
+    trans = "log10",
+    breaks = function(x) {
+      brks <- extended_breaks(Q = c(1, 5))(log10(x))
+      10^(brks[brks %% 1 == 0])
+    },
+    labels = math_format(format = log10)
+  )+
+  annotation_logticks(sides = "l") +
+  ggtitle("Quotiens de mortalité féminins") +
+  xlab("Age") +
+  ylab("Quotien de mortalité")
+```
+
+
+La mortalité féminine générale est quasi indistincte de la mortalité par maladie. La mortalité masculine générale est très influencée par la mortalité par maladie à partir de 40 ans. Entre la naissance et cet âge, il y a une différence constatée entre les deux valeurs, avec un pic autour de 20 ans.
+
+*e- A partir des commentaires des questions c) et d) que conclure sur les populations d’hommes et de
+femmes vis-à-vis de la mortalité par accident et par maladie (en 2 ou 3 lignes maximum)*
+
+La surmortalité des hommes autour de 20 ans, sans que le quotient de mortalité par maladie ne subisse de pic à cet âge, doit donc s'expliquer par une forte surmortalité accidentelle à ces âges. La mortalité féminine générale est quasi indistincte de la mortalité par maladie, indice que la mortalité par accident est marginale dans cette population quelque soit l'âge.
