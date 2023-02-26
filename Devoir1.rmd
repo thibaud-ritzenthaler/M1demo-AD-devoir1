@@ -32,12 +32,10 @@ On calcule ensuite le taux brut de mortalité maladive pour chaque âge.
 ```{r message = FALSE}
 Racine <- 100000
 TableMortMascMaladie <- TableMortMascGeneral %>%
-  select("aqx p.1000") %>%
-  bind_cols(select(TableMortMascAccident, "aqx p.1000")) %>%
-  mutate("aqx p.1000" = `aqx p.1000...1` - `aqx p.1000...2`) %>%
-  select(`aqx p.1000`)
-for (i in seq_along(TableMortMascMaladie$`aqx p.1000`)) {
+  select("aqx p.1000")
+for (i in seq_along(row.names(TableMortMascMaladie))) {
   TableMortMascMaladie$`Sx`[i] <- Racine
+  TableMortMascMaladie$`aqx p.1000`[i] <- round((1 - ((1 - (TableMortMascGeneral$`aqx p.1000`[i]/1000))/(1 - (TableMortMascAccident$`aqx p.1000`[i] /1000)))) * 1000, 2)
   TableMortMascMaladie$`d(x;x+a)`[i] <- round(Racine * (TableMortMascMaladie$`aqx p.1000`[i] * 0.001))
   Racine <- Racine - TableMortMascMaladie$`d(x;x+a)`[i]
 }
@@ -182,7 +180,8 @@ EsperanceDeVieNaissance <- function (Age, Population) {
 `Table I Sexe Feminin` <- EsperanceDeVieNaissance(row.names(TableMortFemmGeneral), TableMortFemmGeneral$Sx)
 `Table III Sexe Masculin` <- EsperanceDeVieNaissance(row.names(TableMortMascMaladie), TableMortMascMaladie$Sx)
 `Table III Sexe Feminin` <- EsperanceDeVieNaissance(row.names(TableMortFemmMaladie), TableMortFemmMaladie$Sx)
-kable(data.frame(`Table I Sexe Masculin`,`Table I Sexe Feminin`,`Table III Sexe Masculin`,`Table III Sexe Feminin`), caption = "Espérance de vie")
+Colones <- c("Table I Sexe Masculin","Table I Sexe Feminin","Table III Sexe Masculin","Table III Sexe Feminin")
+kable(data.frame(`Table I Sexe Masculin`,`Table I Sexe Feminin`,`Table III Sexe Masculin`,`Table III Sexe Feminin`), caption = "Espérance de vie", col.names = Colones)
 ```
 
 L'espérance de vie générale des hommes est de 6 années de moins, l'impact des accidents sur l'espérance de vie des hommes est d'une année et demi alors qu'il n'est que d'une demi année pour les femmes. Sans accidents l'écart d'espérance de vie entre les sexes n'est que de 5 ans.
@@ -196,46 +195,169 @@ On se propose d’établir une partie de la table de mortalité par accident sex
 entre 55-60 ans, 60-65 ans, 65 et 70 ans et entre 70 et 75 ans ?*
 ```{r}
 PopHomme55ans <- 49000
-PopFemme55ans <- 51000
-TableMortAccident <- TableMortMascAccident %>%
+TableMortMasc <- TableMortMascAccident %>%
   slice(13:16) %>%
   select(`aqx p.1000`)
-for (i in seq_along(TableMortAccident$`aqx p.1000`)) {
-  TableMortAccident$`aqx p.1000`[i] <- (TableMortAccident$`aqx p.1000`[i] + TableMortFemmAccident$`aqx p.1000`[12 + i])/2
-  TableMortAccident$`Sx Homme`[i] <- PopHomme55ans
-  TableMortAccident$`Sx Femme`[i] <- PopFemme55ans
-  TableMortAccident$`d(x;x+a) Homme`[i] <- round(PopHomme55ans * (TableMortAccident$`aqx p.1000`[i] * 0.001))
-  TableMortAccident$`d(x;x+a) Femme`[i] <- round(PopFemme55ans * (TableMortAccident$`aqx p.1000`[i] * 0.001))
-  PopHomme55ans <- PopHomme55ans - TableMortAccident$`d(x;x+a) Homme`[i]
-  PopFemme55ans <- PopFemme55ans - TableMortAccident$`d(x;x+a) Femme`[i]
+for (i in seq_along(TableMortMasc$`aqx p.1000`)) {
+  TableMortMasc$`Px`[i] <- PopHomme55ans
+  TableMortMasc$`d'(x;x+5) Accidents`[i] <- round(TableMortMasc$`Px`[i] * (TableMortMascAccident$`aqx p.1000`[i+12]/1000)*(1-(TableMortMascMaladie$`aqx p.1000`[i+12])/1000/2))
+  TableMortMasc$`d'(x;x+5) Maladie`[i] <- round(TableMortMasc$`Px`[i] * (TableMortMascMaladie$`aqx p.1000`[i+12]/1000)*((1-(TableMortMascAccident$`aqx p.1000`[i+12])/1000/2)))
+  PopHomme55ans <- PopHomme55ans - TableMortMasc$`d'(x;x+5) Accidents`[i] - TableMortMasc$`d'(x;x+5) Maladie`[i]
+  if (i == length(TableMortMasc$`aqx p.1000`)) {
+    TableMortMasc <- TableMortMasc %>% add_row(Px = PopHomme55ans)
+    row.names(TableMortMasc)[i+1] <- 75
+  }
 }
+TableMortMasc <- TableMortMasc %>% select(-`aqx p.1000`)
 ```
 ```{r echo = FALSE}
-kable(TableMortAccident, caption = "Table des morts par accidents")
+kable(TableMortMasc, caption = "Table des mortalités masculine")
 ```
 
 *b- Le tableau en annexe donne le nombre de décès féminins par accident et par « maladie » observés dans la génération à ces âges.
 Calculer les quotients par accident (sexes réunis) 5q"a55, 5q"a60, 5q"a65 et 5q"a70 à l’aide des données d’observation et de celles obtenues à la question II-a. Que peut-on dire de ces indicateurs compte tenu des conclusions de la partie I ?*
 
 ```{r warning = FALSE}
-DecesFemmesObserves <- read_excel("./data/exo1/fobservee.xlsx")
-DecesFemmesObserves$`Sx Homme Accident` <- TableMortAccident$`Sx Homme`
-DecesFemmesObserves$`d(x;x+a) Homme Accident` <- TableMortAccident$`d(x;x+a) Homme`
-for (i in seq_along(DecesFemmesObserves$`Age x`)) {
-  if (i != 1) {
-    DecesFemmesObserves$Px[i] <-  DecesFemmesObserves$Px[i-1] - DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`[i-1] - DecesFemmesObserves$`Décés par maladie observés D'm(x;x+5)`[i-1]
+DecesFemmesObserves <- read_excel("./data/exo1/fobservee.xlsx")  %>% column_to_rownames("Age x")
+Px <- DecesFemmesObserves$Px[1]
+for (i in seq_along(DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`)) {
+  DecesFemmesObserves$Px[i] <- Px
+  Px <- Px - DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`[i] - DecesFemmesObserves$`Décés par maladie observés D'm(x;x+5)`[i]
+  if (i == length(DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`)) {
+    DecesFemmesObserves <- DecesFemmesObserves %>% add_row(Px = Px)
+    row.names(DecesFemmesObserves)[i+1] <- 75
   }
-  DecesFemmesObserves$`aq"x p.1000`[i] <- (DecesFemmesObserves$`d(x;x+a) Homme Accident` + DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`[i])/(DecesFemmesObserves$Px[i]+DecesFemmesObserves$`Sx Homme Accident`)*1000
 }
-
-
+DecesSexesReunis <- TableMortMasc
+DecesSexesReunis$`d'(x;x+5) Accidents` <- DecesSexesReunis$`d'(x;x+5) Accidents` + DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`
+DecesSexesReunis$`d'(x;x+5) Maladie` <- DecesSexesReunis$`d'(x;x+5) Maladie` + DecesFemmesObserves$`Décés par maladie observés D'm(x;x+5)`
+DecesSexesReunis$Px <- DecesSexesReunis$Px + DecesFemmesObserves$Px
+for (i in seq(DecesSexesReunis$Px)) {
+DecesSexesReunis$`5q''ax`[i] <- round(DecesSexesReunis$`d'(x;x+5) Accidents`[i]/(DecesSexesReunis$Px[i] - (DecesSexesReunis$`d'(x;x+5) Maladie`[i]/2)) * 1000,2)
+}
 ```
 ```{r echo = FALSE}
-kable(DecesFemmesObserves, caption = "Table des morts par accidents")
+kable(DecesSexesReunis, caption = "Table des décès réunis")
 ```
 
 Quand on prend les paramètres sans faire la distinction des sexes en additionnant les quotients (une sorte de moyenne), il y a une bien plus grande mortalité des femmes que constaté avec les chiffres réels. Si on reconstruit le quotient de mortalité par accident peu importe le sexe avec ces chiffres, il baisse considérablement. Avec les éléments obtenus plus haut, on en déduit que la mortalité accidentelle est bien plus présente chez les hommes que chez les femmes, même dans cette période de la vie.
 
 *c-Plaçons-nous dans l’hypothèse où la mortalité par « maladie » des hommes serait égale à celle des femmes. Dans ce cas les décès masculins observés seraient les suivants. Les décès féminins restent inchangés. Calculer, dans cette hypothèse, les quotients par accident (sexes réunis) aux mêmes âges que précédemment. Les comparer aux quotients calculés à la question IIb. Commenter.*
 
+```{r warning = FALSE}
+DecesHommesObserves <- read_excel("./data/exo1/mobservee.xlsx") %>% column_to_rownames("Age x")
+DecesSexesReunisObs <- TableMortMasc
+DecesSexesReunisObs$`d'(x;x+5) Accidents` <- DecesSexesReunisObs$`d'(x;x+5) Accidents` + DecesFemmesObserves$`Décés par accident observés D'a(x;x+5)`
+DecesSexesReunis$`d'(x;x+5) Maladie` <- DecesSexesReunis$`d'(x;x+5) Maladie` + DecesFemmesObserves$`Décés par maladie observés D'm(x;x+5)`
+DecesSexesReunisObs$Px <- DecesSexesReunisObs$Px + DecesSexesReunisObs$Px
+for (i in seq(DecesSexesReunisObs$Px)) {
+  DecesSexesReunisObs$`5qax`[i] <- round(DecesSexesReunisObs$`d'(x;x+5) Accidents`[i]/(DecesSexesReunisObs$Px[i] - (DecesSexesReunisObs$`d'(x;x+5) Maladie`[i]/2)) * 1000,2)
+}
+```
+```{r echo = FALSE}
+kable(DecesSexesReunisObs, caption = "Table des morts par accidents")
+```
+
+On retrouve des quotients du même ordre qu'à la question IIa, quotients plus élevés que les quotients de la question IIb. Cela confirme que le quotient de mortalité par accident si on prend en compte la population théorique masculine et la population réelle féminine biaise les résultats, preuve que la mortalité féminine par accident est plus faible.
+
+*d- Construire les deux tables partielles de mortalité par accident (sexes réunis), de 55 à 75 ans, correspondant aux deux séries de quotients. Calculer 20q"a55 dans les deux cas.*
+
+```{r}
+PopulationHommeFemme <- 100000
+TableMortFunc <- function (Age, Racine, Quotients) {
+  Res <- data.frame(Quotients, row.names = Age)
+  for (i in seq_along(Age)){
+    Res$`Sx`[i] <- Racine
+    Res$`d(x;x+a)`[i] <- round(Res$`Quotients`[i] * Res$`Sx`[i] / 1000)
+    Racine <- Racine - Res$`d(x;x+a)`[i]
+  }
+  Res <- relocate(Res, `Sx`, `d(x;x+a)`, `aqx P.1000` = `Quotients`)
+  return(Res)
+}
+TableMortAccidentSecond <- TableMortFunc(row.names(DecesSexesReunisObs),PopulationHommeFemme,DecesSexesReunisObs$`5qax`) %>% rename(`5q''ax P.1000` = `aqx P.1000`)
+TableMortAccidentObs <- TableMortFunc(row.names(DecesSexesReunis),PopulationHommeFemme,DecesSexesReunis$`5q''ax`) %>% rename(`5qax P.1000` = `aqx P.1000`)
+SommeDecesSexeReunis <- sum(TableMortAccidentSecond$`d(x;x+a)`,  na.rm=TRUE)
+SommeDecesSexeReunisObs <- sum(TableMortAccidentObs$`d(x;x+a)`,  na.rm=TRUE)
+Quotient20qSeconda55 <- SommeDecesSexeReunis/PopulationHommeFemme * 1000
+Quotient20qa55 <- SommeDecesSexeReunisObs/PopulationHommeFemme * 1000
+```
+```{r echo = FALSE}
+#Colones <- c("20q''a55 p.1000", "20qa55 p.1000")
+#Quotients20qa55 <- data.frame(`20q"a55`,`20qa55`)
+kable(TableMortAccidentSecond)
+kable(TableMortAccidentObs)
+```
+
+*e- La probabilité de décéder par accident des deux sexes réunis entre 55 ans et 75 ans (20q’’a55) est en fait une moyenne pondérée des probabilités de décéder par accident de chaque sexe aux mêmes âges, les coefficients de pondération étant les taux de masculinité et de féminité à 55 ans. Calculer cette probabilité (20q’’a55) à l’aide de cette relation.*
+```{r}
+ProbabiliteDecesSecond <- ((SommeDecesSexeReunis/PopulationHommeFemme * 0.51) + (SommeDecesSexeReunis/PopulationHommeFemme * 0.49)) * 1000
+ProbabiliteDecesObs <- ((SommeDecesSexeReunisObs/PopulationHommeFemme * 0.51) + (SommeDecesSexeReunisObs/PopulationHommeFemme * 0.49)) * 1000
+```
+```{r echo = FALSE}
+Colones <- c("Probabilité de la table de mortalité calculée","Probabilité de la table de mortalité \"Observée \"")
+kable(data.frame(ProbabiliteDecesSecond,ProbabiliteDecesObs), col.names = Colones, caption = "Probabilités de mourir entre 55 et 75 ans")
+```
+
+**Comparer les valeurs obtenues à la question IId et dire dans quel cas la relation définie ci-dessus est vérifiée. Commenter.**
+
+
+## Exercice 2
+
+Porter ces données du tableau 1 sur deux graphiques et les données du tableau 2 sur deux graphiques et commenter en portant en abscisse les générations des personnes. Commenter en étant le plus synthétique possible en montrant les effets d’âge, de génération et de sexe.
+```{r include = FALSE}
+library(cowplot)
+NiveauEtudeFemme <- read_excel("./data/exo2/niveauEtudeFemme.xlsx")
+NiveauEtudeHomme <- read_excel("./data/exo2/niveauEtudeHomme.xlsx")
+DiplomeFemme <- read_excel("./data/exo2/diplomeFemme.xlsx")
+DiplomeHomme <- read_excel("./data/exo2/diplomeHomme.xlsx")
+
+NiveauEtudeFemmeTidy <- NiveauEtudeFemme %>% rename("Classes maternelles et primaires" = "Maternelle et primaire") %>% pivot_longer(c(`Aucune scolarité`,`Aucune scolarité mais alphabétisé`,`Classes maternelles et primaires`, `Collège`, `Lycée et au-delà`), names_to = "Scolarite", values_to = "Proportion")
+NiveauEtudeHommeTidy <- NiveauEtudeHomme %>% rename("Classes maternelles et primaires" = "Maternelle et primaire") %>% pivot_longer(c(`Aucune scolarité`,`Aucune scolarité mais alphabétisé`,`Classes maternelles et primaires`, `Collège`, `Lycée et au-delà`), names_to = "Scolarite", values_to = "Proportion")
+
+DiplomeFemmeTidy <- DiplomeFemme  %>% pivot_longer(c(`Aucun diplôme`,`inf, bac`,`sup, bac`), names_to = "Diplome", values_to = "Proportion")
+DiplomeHommeTidy <- DiplomeHomme %>% pivot_longer(c(`Aucun diplôme`,`inf, bac`,`sup, bac`), names_to = "Diplome", values_to = "Proportion")
+
+```
+```{r ggplot2, echo = FALSE }
+
+ggplot(NiveauEtudeFemmeTidy) +
+  geom_col(aes(x = `Age`, y = `Proportion`, fill = Scolarite))+
+  scale_fill_manual("Scolarité", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
+  ggtitle("Niveau d'\u00e9tude des femmes par \u00E2ge en proportion")+
+  ylab("Proportion de la classe d'\u00E2ge (%)")+
+  xlab("\u00C2ge")+
+  theme(legend.position=c(0.84, 0.84))
+ggplot(NiveauEtudeHommeTidy) +
+  geom_col(aes(x = `Age`, y = `Proportion`, fill = Scolarite))+
+  scale_fill_manual("Scolarité", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
+  ggtitle("Niveau d'\u00e9tude des hommes par \u00E2ge en proportion")+
+  ylab("Proportion de la classe d'\u00E2ge (%)")+
+  xlab("\u00C2ge")+
+  theme(legend.position=c(0.84, 0.84))
+```
+
+```{r echo = FALSE }
+
+ggplot(DiplomeFemmeTidy) +
+  geom_col(aes(x = `Age`, y = `Proportion`, fill = Diplome))+
+  scale_fill_manual("Diplôme", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
+  ggtitle("Dipl\u00F4mes obtenus par les femmes par \u00E2ge en proportion")+
+  ylab("Proportion de la classe d'\u00E2ge (%)")+
+  xlab("\u00C2ge")+
+  coord_flip()+
+  theme(legend.position=c(0.9, 0.9))
+ggplot(DiplomeHommeTidy) +
+  geom_col(aes(x = `Age`, y = `Proportion`, fill = Diplome))+
+  scale_fill_manual("Diplôme", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
+  ggtitle("Dipl\u00F4mes obtenus par les hommes par \u00E2ge en proportion")+
+  ylab("Proportion de la classe d'\u00E2ge (%)")+
+  xlab("\u00C2ge")+
+  coord_flip()+
+  theme(legend.position=c(0.9, 0.9))
+
+```
+
+TODO : Rédaction commentaire
+
+# Exercice 3
 
