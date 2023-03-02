@@ -18,6 +18,9 @@ masculine par « maladie » de cette génération). L’appeler Table III M.*
 library(readxl)
 library(tidyverse)
 library(knitr)
+# pour un doc pdf, remplacer output par pdf_document et decommenter les lignes suivantes
+#library(tinytex)
+#tinytex::install_tinytex()
 setwd("C:/Users/Thibaud/Documents/Demographie/M1S2/UE1 - Analyse demographique/Breton/DM1")
 
 TableMortMascGeneral <- read_excel("./data/exo1/tmhgen.xlsx") %>%
@@ -322,14 +325,14 @@ DiplomeHommeTidy <- DiplomeHomme %>% pivot_longer(c(`Aucun diplôme`,`inf, bac`,
 
 ggplot(NiveauEtudeFemmeTidy) +
   geom_col(aes(x = `Age`, y = `Proportion`, fill = Scolarite))+
-  scale_fill_manual("Scolarité", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
+  scale_fill_manual("Scolarit\u00e9", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
   ggtitle("Niveau d'\u00e9tude des femmes par \u00E2ge en proportion")+
   ylab("Proportion de la classe d'\u00E2ge (%)")+
   xlab("\u00C2ge")+
   theme(legend.position=c(0.84, 0.84))
 ggplot(NiveauEtudeHommeTidy) +
   geom_col(aes(x = `Age`, y = `Proportion`, fill = Scolarite))+
-  scale_fill_manual("Scolarité", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
+  scale_fill_manual("Scolarit\u00e9", values = c("#ff5157","#ffc320","#71a257","#2c8ecb","#785f9a"))+
   ggtitle("Niveau d'\u00e9tude des hommes par \u00E2ge en proportion")+
   ylab("Proportion de la classe d'\u00E2ge (%)")+
   xlab("\u00C2ge")+
@@ -358,6 +361,143 @@ ggplot(DiplomeHommeTidy) +
 ```
 
 TODO : Rédaction commentaire
+- Niveau d'étude s'inverse complètement entre les générations
+- 35-44 ans generation de transition chez les femmes, 45-54 ans pour les hommes
+- Femmes plus diplomées du lycée et au dela a partir de 18-24
+- 18-24, Gen en constrution de diplome du superieur
+- Femmes plus diplomees et plus diplomes du superieur avant 45 ans, moins après
 
 # Exercice 3
 
+*Une enquête rétrospective réalisée en 2005 auprès d’un échantillon représentatif d’hommes et de femmes âgés de 18-79 ans, donne les renseignements suivants :*
+
+- *1486 femmes ont déclaré avoir eu un enfant entre les années 1976 et 1985 et vivre en couple au moment de la naissance cet enfant*
+- *1362 femmes ont déclaré avoir eu un enfant entre les années 1966 et 1975 et vivre en couple au moment de la naissance cet enfant*
+- *1114 hommes ont déclaré avoir eu un enfant entre les années 1976 et 1985 et vivre en couple au moment de la naissance cet enfant*
+- *1041 femmes ont déclaré avoir eu un enfant entre les années 1966 et 1975 et vivre en couple au moment de la naissance cet enfant*
+
+*Un certain nombre des unions sont rompues au fil des années qui suivent la naissance. Elles sont rompues soit du fait d’une séparation, soit à cause du décès du conjoint. Les personnes déclarent les causes de la rupture de chacune de leurs unions.*
+```{r include = FALSE}
+library(LexisPlotR)
+PopFEnfants76.85 <- 1486
+PopFEnfants66.75 <- 1362
+PopHEnfants76.85 <- 1114
+PopHEnfants66.75 <- 1041
+
+FinUnionFEnfants76.85 <- read_excel("./data/exo3/f76.xlsx")
+FinUnionFEnfants66.75 <- read_excel("./data/exo3/f66.xlsx")
+FinUnionHEnfants76.85 <- read_excel("./data/exo3/h76.xlsx")
+FinUnionHEnfants66.75 <- read_excel("./data/exo3/h66.xlsx")
+```
+```{r echo = FALSE}
+lexis_grid(year_start = 1965, year_end = 2006, age_start = 0, age_end = 20, delta = 5) %>%
+  lexis_polygon(
+    group = c("FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75"),
+    x = c("1966-01-01","1976-01-01", "1976-01-01" ,"1971-01-01" ,"1971-01-01"),
+    y = c(0,0,5,0,5),
+    fill = "#ffc320"
+  )%>%
+  lexis_polygon(
+    group = c("FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75", "FEnfants66.75", "FEnfants66.75"),
+    x = c("1971-01-01" ,"1976-01-01", "1976-01-01", "1981-01-01" ,"1981-01-01", "1976-01-01", "1976-01-01", "1971-01-01"),
+    y = c(0,5,0,5,10,5,10,5),
+    fill = "#ff7120"
+  )%>%
+  lexis_polygon(
+          group = c("FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75", "FEnfants66.75", "FEnfants66.75"),
+          x = c("1976-01-01" ,"1981-01-01", "1981-01-01", "1986-01-01" ,"1986-01-01", "1981-01-01", "1981-01-01", "1976-01-01"),
+          y = c(5,10,5,10,15,10,15,10),
+    fill = "#ff8b51"
+  )%>%
+  lexis_polygon(
+          group = c("FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75","FEnfants66.75", "FEnfants66.75", "FEnfants66.75"),
+          x = c("1981-01-01" ,"1986-01-01", "1986-01-01", "1991-01-01" ,"1991-01-01", "1986-01-01", "1986-01-01", "1981-01-01"),
+          y = c(10,15,10,15,20,15,20,15),
+    fill = "#ffcd51"
+  )%>%
+  lexis_polygon(
+    group = c("FEnfants66.75","FEnfants66.75"),
+    x = c("1966-01-01","1976-01-01", "1976-01-01" ,"1966-01-01"),
+    y = c(0,0,0.2,0.2),
+    fill = "#71a257"
+  )%>%
+  lexis_polygon(
+    group = c("Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85"),
+    x = c("1976-01-01","1986-01-01", "1986-01-01" ,"1981-01-01" ,"1981-01-01"),
+    y = c(0,0,5,0,5),
+    fill = "#2c8ecb"
+  )%>%
+  lexis_polygon(
+    group = c("Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85"),
+    x = c("1981-01-01" ,"1986-01-01", "1986-01-01", "1991-01-01" ,"1991-01-01", "1986-01-01", "1986-01-01", "1981-01-01"),
+    y = c(0,5,0,5,10,5,10,5),
+    fill = "#2cc8cb"
+  )%>%
+  lexis_polygon(
+    group = c("Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85"),
+    x = c("1986-01-01" ,"1991-01-01", "1991-01-01", "1996-01-01" ,"1996-01-01", "1991-01-01", "1991-01-01", "1986-01-01"),
+    y = c(5,10,5,10,15,10,15,10),
+    fill = "#2ccb91"
+  )%>%
+  lexis_polygon(
+    group = c("Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85","Enfants76.85"),
+    x = c("1991-01-01" ,"1996-01-01", "1996-01-01", "2001-01-01" ,"2001-01-01", "1996-01-01", "1996-01-01", "1991-01-01"),
+    y = c(10,15,10,15,20,15,20,15),
+    fill = "#2c54cb"
+  )%>%
+  lexis_polygon(
+    group = c("Enfants76.85","Enfants76.85"),
+    x = c("1976-01-01","1986-01-01", "1986-01-01" ,"1976-01-01"),
+    y = c(0,0,0.2,0.2),
+    fill = "#ff5157"
+  )
+```
+<span style="color: #71a257;">-</span> 1362 femmes et 1041 hommes ont un enfant
+
+<span style="color: #ff5157;">-</span> 1486 femmes et 1114 hommes ont un enfant
+
+<span style="color: #ffc320;">//</span> 68 séparations, 13 décès de conjoint chez les femmes, 71 séparations chez les hommes
+
+<span style="color: #ff7120;">//</span> 95 séparations, 15 décès de conjoint chez les femmes, 59 séparations, 2 décès de conjoint chez les hommes
+
+<span style="color: #ff8b51;">//</span> 107 séparations, 17 décès de conjoint chez les femmes, 59 séparations, 6 décès de conjoint chez les hommes
+
+<span style="color: #ffcd51;">//</span> 81 séparations, 21 décès de conjoint chez les femmes, 50 séparations, 7 décès de conjoint chez les hommes
+
+<span style="color: #2c8ecb;">//</span> 135 séparations, 12 décès de conjoint chez les femmes, 128 séparations, 14 décès de conjoint chez les hommes
+
+<span style="color: #2cc8cb;">//</span> 128 séparations, 14 décès de conjoint chez les femmes, 104 séparations, 3 décès de conjoint chez les hommes
+
+<span style="color: #2ccb91;">//</span> 110 séparations, 11 décès de conjoint chez les femmes, 58 séparations, 4 décès de conjoint chez les hommes
+
+<span style="color: #2c54cb;">//</span> 23 séparations, 5 décès de conjoint chez les femmes, 16 séparations, 2 décès de conjoint chez les hommes
+
+
+*2- Comparer, pour les enfants les proportions d’enfants vivant encore avec ses deux parents à 19 ans révolus (vivant et encore en couple) dans chacun des 4 cas. Commenter. Ces mesures sont-elles des mesures brutes ou nettes ? Expliciter.*
+
+```{r}
+EnfantsDeuxParentsF66.75 <- round((PopFEnfants66.75 - sum(FinUnionFEnfants66.75$`Décès du conjoint`) - sum(FinUnionFEnfants66.75$`Séparation`))/PopFEnfants66.75 * 100,2)
+EnfantsDeuxParentsH66.75 <- round((PopHEnfants66.75 - sum(FinUnionHEnfants66.75$`Décès du conjoint`, na.rm =TRUE ) - sum(FinUnionHEnfants66.75$`Séparation`))/PopHEnfants66.75 * 100,2)
+EnfantsDeuxParentsF76.85 <- round((PopFEnfants76.85 - sum(FinUnionFEnfants76.85$`Décès du conjoint`) - sum(FinUnionFEnfants76.85$`Séparation`))/PopFEnfants76.85 * 100, 2)
+EnfantsDeuxParentsH76.85 <- round((PopHEnfants76.85 - sum(FinUnionHEnfants76.85$`Décès du conjoint`) - sum(FinUnionHEnfants76.85$`Séparation`))/PopHEnfants76.85 * 100,2)
+```
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+library(kableExtra)
+
+kable(data.frame(EnfantsDeuxParentsF66.75, EnfantsDeuxParentsH66.75, EnfantsDeuxParentsF76.85, EnfantsDeuxParentsH76.85), col.names = c("Selon les m\u00E8res", "Selon les p\u00E8res", "Selon les m\u00E8res", "Selon les p\u00E8res"),booktabs = TRUE, valign = 't')  %>%
+        add_header_above(c("N\u00E9s entre 1966 et 1975" = 2, "N\u00E9s entre 1976 et 1985" = 2))
+```
+*Proportions d’enfants vivant encore avec ses deux parents à 19 ans révolus (en %)*
+
+Les pères ont tendance à moins déclarer leurs enfants comme vivant sans leurs deux parents que les mères. Ces mesures sont nettes, elles décrivent une proportion finale sans isolations d'évènements spécifiques.
+
+*3- Utiliser les méthodes d’analyse démographique pour comparer l’évolution des probabilités de connaître la séparation par rupture de ses parents dans les différentes cohortes et selon le sexe du répondant (construction de tables). Commenter.*
+
+```{r}
+#FinUnionFEnfants66.75 <- FinUnionFEnfants66.75 %>% mutate(`5dx` = )
+```
+Voir la méthode à utiliser en fonction des données.
+
+*4- Quelles hypothèses faites-vous pour le calcul du point 3.*
+
+*5- Calculer les indices de calendrier de séparation par rupture d’avec ses parents dans les différentes générations d’enfants selon que ce soit le père ou la mère qui réponde. Commenter.*
